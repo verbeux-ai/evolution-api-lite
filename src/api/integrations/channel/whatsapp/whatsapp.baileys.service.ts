@@ -110,6 +110,7 @@ import { Label } from 'baileys/lib/Types/Label';
 import { LabelAssociation } from 'baileys/lib/Types/LabelAssociation';
 import { isBase64, isURL } from 'class-validator';
 import { randomBytes } from 'crypto';
+import cuid from 'cuid';
 import EventEmitter2 from 'eventemitter2';
 import { readFileSync } from 'fs';
 import Long from 'long';
@@ -1114,26 +1115,18 @@ export class BaileysStartupService extends ChannelStartupService {
       data: { association: LabelAssociation; type: 'remove' | 'add' },
       database: Database,
     ) => {
+      this.logger.info(
+        `labels association - ${data?.association?.chatId} (${data.type}-${data?.association?.type}): ${data?.association?.labelId}`,
+      );
       if (database.SAVE_DATA.CHATS) {
-        const chats = await this.prismaRepository.chat.findMany({
-          where: { instanceId: this.instanceId },
-        });
-        const chat = chats.find((c) => c.remoteJid === data.association.chatId);
-        if (chat) {
-          const labelsArray = Array.isArray(chat.labels) ? chat.labels.map((event) => String(event)) : [];
-          let labels = [...labelsArray];
+        const instanceId = this.instanceId;
+        const chatId = data.association.chatId;
+        const labelId = data.association.labelId;
 
-          if (data.type === 'remove') {
-            labels = labels.filter((label) => label !== data.association.labelId);
-          } else if (data.type === 'add') {
-            labels = [...labels, data.association.labelId];
-          }
-          await this.prismaRepository.chat.update({
-            where: { id: chat.id },
-            data: {
-              labels,
-            },
-          });
+        if (data.type === 'add') {
+          await this.addLabel(labelId, instanceId, chatId);
+        } else if (data.type === 'remove') {
+          await this.removeLabel(labelId, instanceId, chatId);
         }
       }
 
@@ -2492,7 +2485,7 @@ export class BaileysStartupService extends ChannelStartupService {
       await this.client.updateStatusPrivacy(settings.status);
       await this.client.updateOnlinePrivacy(settings.online);
       await this.client.updateLastSeenPrivacy(settings.last);
-      await this.client.updateGroupsAddPrivacy(settings.groupadd);
+      await this.client.updateGroupsAddPrivacy(<any>settings.groupadd);
 
       this.reloadConnection();
 
@@ -2710,11 +2703,13 @@ export class BaileysStartupService extends ChannelStartupService {
     try {
       if (data.action === 'add') {
         await this.client.addChatLabel(contact.jid, data.labelId);
+        await this.addLabel(data.labelId, this.instanceId, contact.jid);
 
         return { numberJid: contact.jid, labelId: data.labelId, add: true };
       }
       if (data.action === 'remove') {
         await this.client.removeChatLabel(contact.jid, data.labelId);
+        await this.removeLabel(data.labelId, this.instanceId, contact.jid);
 
         return { numberJid: contact.jid, labelId: data.labelId, remove: true };
       }
@@ -3086,5 +3081,51 @@ export class BaileysStartupService extends ChannelStartupService {
     }
 
     return messageRaw;
+  }
+  private async addLabel(labelId: string, instanceId: string, chatId: string) {
+    const id = cuid();
+
+    await this.prismaRepository.$executeRawUnsafe(
+      `INSERT INTO "Chat" ("id", "instanceId", "remoteJid", "labels", "createdAt", "updatedAt")
+       VALUES ($4, $2, $3, to_jsonb(ARRAY[$1]::text[]), NOW(), NOW()) ON CONFLICT ("instanceId", "remoteJid")
+     DO
+      UPDATE
+          SET "labels" = (
+          SELECT to_jsonb(array_agg(DISTINCT elem))
+          FROM (
+          SELECT jsonb_array_elements_text("Chat"."labels") AS elem
+          UNION
+          SELECT $1::text AS elem
+          ) sub
+          ),
+          "updatedAt" = NOW();`,
+      labelId,
+      instanceId,
+      chatId,
+      id,
+    );
+  }
+  private async removeLabel(labelId: string, instanceId: string, chatId: string) {
+    const id = cuid();
+
+    await this.prismaRepository.$executeRawUnsafe(
+      `INSERT INTO "Chat" ("id", "instanceId", "remoteJid", "labels", "createdAt", "updatedAt")
+       VALUES ($4, $2, $3, '[]'::jsonb, NOW(), NOW()) ON CONFLICT ("instanceId", "remoteJid")
+     DO
+      UPDATE
+          SET "labels" = COALESCE (
+          (
+          SELECT jsonb_agg(elem)
+          FROM jsonb_array_elements_text("Chat"."labels") AS elem
+          WHERE elem <> $1
+          ),
+          '[]'::jsonb
+          ),
+          "updatedAt" = NOW();`,
+      labelId,
+      instanceId,
+      chatId,
+      id,
+    );
   }
 }
