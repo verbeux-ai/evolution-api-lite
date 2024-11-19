@@ -445,36 +445,37 @@ export class ChannelStartupService {
     let result;
     if (remoteJid) {
       result = await this.prismaRepository.$queryRaw`
-            SELECT
-                "Chat"."id",
-                "Chat"."remoteJid",
-                "Chat"."name",
-                "Chat"."labels",
-                "Chat"."createdAt",
-                "Chat"."updatedAt",
-                "Contact"."pushName",
-                "Contact"."profilePicUrl"
-            FROM "Chat"
-            INNER JOIN "Message" ON "Chat"."remoteJid" = "Message"."key"->>'remoteJid'
-            LEFT JOIN "Contact" ON "Chat"."remoteJid" = "Contact"."remoteJid"
-            WHERE "Chat"."instanceId" = ${this.instanceId}
+          SELECT "Chat"."id",
+                 "Chat"."remoteJid",
+                 "Chat"."instanceId",
+                 "Chat"."name",
+                 "Chat"."labels",
+                 "Chat"."createdAt",
+                 "Chat"."updatedAt",
+                 "Contact"."pushName",
+                 "Contact"."profilePicUrl"
+          FROM "Chat"
+                   INNER JOIN "Message" ON "Chat"."remoteJid" = "Message"."key" ->> 'remoteJid' AND "Chat"."instanceId" = "Message"."instanceId"
+                   LEFT JOIN "Contact" ON "Chat"."remoteJid" = "Contact"."remoteJid" AND "Chat"."instanceId" = "Contact"."instanceId"
+          WHERE "Chat"."instanceId" = ${this.instanceId}
             AND "Chat"."remoteJid" = ${remoteJid}
-            GROUP BY
-                "Chat"."id",
-                "Chat"."remoteJid",
-                "Chat"."name",
-                "Chat"."labels",
-                "Chat"."createdAt",
-                "Chat"."updatedAt",
-                "Contact"."pushName",
-                "Contact"."profilePicUrl"
-            ORDER BY "Chat"."updatedAt" DESC;
-        `;
+          GROUP BY "Chat"."id",
+                   "Chat"."remoteJid",
+                   "Chat"."name",
+                   "Chat"."labels",
+                   "Chat"."instanceId",
+                   "Chat"."createdAt",
+                   "Chat"."updatedAt",
+                   "Contact"."pushName",
+                   "Contact"."profilePicUrl"
+          ORDER BY "Chat"."updatedAt" DESC;
+      `;
     } else {
       result = await this.prismaRepository.$queryRaw`
             SELECT
                 "Chat"."id",
                 "Chat"."remoteJid",
+                "Chat"."instanceId",
                 "Chat"."name",
                 "Chat"."labels",
                 "Chat"."createdAt",
@@ -482,12 +483,13 @@ export class ChannelStartupService {
                 "Contact"."pushName",
                 "Contact"."profilePicUrl"
             FROM "Chat"
-            INNER JOIN "Message" ON "Chat"."remoteJid" = "Message"."key"->>'remoteJid'
-            LEFT JOIN "Contact" ON "Chat"."remoteJid" = "Contact"."remoteJid"
+            INNER JOIN "Message" ON "Chat"."remoteJid" = "Message"."key"->>'remoteJid' AND "Chat"."instanceId" = "Message"."instanceId"
+            LEFT JOIN "Contact" ON "Chat"."remoteJid" = "Contact"."remoteJid" AND "Chat"."instanceId" = "Contact"."instanceId"
             WHERE "Chat"."instanceId" = ${this.instanceId}
             GROUP BY
                 "Chat"."id",
                 "Chat"."remoteJid",
+                "Chat"."instanceId",
                 "Chat"."name",
                 "Chat"."labels",
                 "Chat"."createdAt",
