@@ -910,9 +910,11 @@ export class BaileysStartupService extends ChannelStartupService {
             }
           }
 
+          const editedMessage =
+          received.message?.protocolMessage || received.message?.editedMessage?.message?.protocolMessage;
+
           if (received.message?.protocolMessage?.editedMessage || received.message?.editedMessage?.message) {
-            const editedMessage =
-              received.message?.protocolMessage || received.message?.editedMessage?.message?.protocolMessage;
+            
             if (editedMessage) {
               await this.sendDataWebhook(Events.MESSAGES_EDITED, editedMessage);
             }
@@ -940,7 +942,7 @@ export class BaileysStartupService extends ChannelStartupService {
           const messageKey = `${this.instance.id}_${received.key.id}`;
           const cached = await this.baileysCache.get(messageKey);
 
-          if (cached) {
+          if (cached && !editedMessage) {
             this.logger.info(`Message duplicated ignored: ${received.key.id}`);
             continue;
           }
@@ -1166,7 +1168,7 @@ export class BaileysStartupService extends ChannelStartupService {
         }
 
         await this.baileysCache.set(updateKey, true, 30 * 60);
-        
+
         if (key.remoteJid !== 'status@broadcast') {
           let pollUpdates: any;
 
