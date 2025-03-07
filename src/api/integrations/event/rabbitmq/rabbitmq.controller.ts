@@ -161,8 +161,8 @@ export class RabbitmqController extends EventController implements EventControll
           });
 
           const queueName = prefixKey
-          ? `${prefixKey}.${event.replace(/_/g, '.').toLowerCase()}`
-          : event.replace(/_/g, '.').toLowerCase();
+            ? `${prefixKey}.${event.replace(/_/g, '.').toLowerCase()}`
+            : event.replace(/_/g, '.').toLowerCase();
 
           await this.amqpChannel.assertQueue(queueName, {
             durable: true,
@@ -212,9 +212,9 @@ export class RabbitmqController extends EventController implements EventControll
       if (events[event] === false) return;
 
       const queueName =
-      prefixKey !== ''
-        ? `${prefixKey}.${event.replace(/_/g, '.').toLowerCase()}`
-        : `${event.replace(/_/g, '.').toLowerCase()}`;
+        prefixKey !== ''
+          ? `${prefixKey}.${event.replace(/_/g, '.').toLowerCase()}`
+          : `${event.replace(/_/g, '.').toLowerCase()}`;
       const exchangeName = rabbitmqExchangeName;
 
       this.amqpChannel.assertExchange(exchangeName, 'topic', {

@@ -916,10 +916,9 @@ export class BaileysStartupService extends ChannelStartupService {
           }
 
           const editedMessage =
-          received.message?.protocolMessage || received.message?.editedMessage?.message?.protocolMessage;
+            received.message?.protocolMessage || received.message?.editedMessage?.message?.protocolMessage;
 
           if (received.message?.protocolMessage?.editedMessage || received.message?.editedMessage?.message) {
-            
             if (editedMessage) {
               await this.sendDataWebhook(Events.MESSAGES_EDITED, editedMessage);
             }
@@ -4023,8 +4022,8 @@ export class BaileysStartupService extends ChannelStartupService {
     return response;
   }
 
-   //Catalogs and collections
-   public async fetchCatalog(instanceName: string, data: getCatalogDto) {
+  //Catalogs and collections
+  public async fetchCatalog(instanceName: string, data: getCatalogDto) {
     const jid = data.number ? createJid(data.number) : this.client?.user?.id;
     const limit = data.limit || 10;
     const cursor = data.cursor || null;

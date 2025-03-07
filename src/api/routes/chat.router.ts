@@ -291,8 +291,7 @@ export class ChatRouter extends RouterBroker {
         });
 
         return res.status(HttpStatus.OK).json(response);
-      })
-      
+      });
   }
 
   public readonly router: Router = Router();

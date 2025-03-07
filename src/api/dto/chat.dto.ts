@@ -126,7 +126,7 @@ export class BlockUserDto {
   number: string;
   status: 'block' | 'unblock';
 }
- 
+
 export class getCatalogDto {
   number?: string;
   limit?: number;
