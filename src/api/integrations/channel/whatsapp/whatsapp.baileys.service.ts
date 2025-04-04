@@ -122,7 +122,6 @@ import { Label } from 'baileys/lib/Types/Label';
 import { LabelAssociation } from 'baileys/lib/Types/LabelAssociation';
 import { isArray, isBase64, isURL } from 'class-validator';
 import { randomBytes } from 'crypto';
-import cuid from 'cuid';
 import EventEmitter2 from 'eventemitter2';
 import { readFileSync } from 'fs';
 import Long from 'long';
