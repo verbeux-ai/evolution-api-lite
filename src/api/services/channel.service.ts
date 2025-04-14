@@ -517,49 +517,6 @@ export class ChannelStartupService {
         : Prisma.sql``;
 
     const results = await this.prismaRepository.$queryRaw`
-        WITH rankedMessages AS (
-          SELECT DISTINCT ON ("Contact"."remoteJid")
-            "Contact"."id",
-            "Contact"."remoteJid",
-            "Contact"."pushName",
-            "Contact"."profilePicUrl",
-            COALESCE(
-              to_timestamp("Message"."messageTimestamp"::double precision), 
-              "Contact"."updatedAt"
-            ) as "updatedAt",
-            "Chat"."createdAt" as "windowStart",
-            "Chat"."createdAt" + INTERVAL '24 hours' as "windowExpires",
-            CASE 
-              WHEN "Chat"."createdAt" + INTERVAL '24 hours' > NOW() THEN true 
-              ELSE false 
-            END as "windowActive",
-            "Message"."id" AS lastMessageId,
-            "Message"."key" AS lastMessage_key,
-            "Message"."pushName" AS lastMessagePushName,
-            "Message"."participant" AS lastMessageParticipant,
-            "Message"."messageType" AS lastMessageMessageType,
-            "Message"."message" AS lastMessageMessage,
-            "Message"."contextInfo" AS lastMessageContextInfo,
-            "Message"."source" AS lastMessageSource,
-            "Message"."messageTimestamp" AS lastMessageMessageTimestamp,
-            "Message"."instanceId" AS lastMessageInstanceId,
-            "Message"."sessionId" AS lastMessageSessionId,
-            "Message"."status" AS lastMessageStatus
-          FROM "Contact"
-          INNER JOIN "Message" ON "Message"."key"->>'remoteJid' = "Contact"."remoteJid"
-          LEFT JOIN "Chat" ON "Chat"."remoteJid" = "Contact"."remoteJid" 
-            AND "Chat"."instanceId" = "Contact"."instanceId"
-          WHERE 
-            "Contact"."instanceId" = ${this.instanceId}
-            AND "Message"."instanceId" = ${this.instanceId}
-            ${remoteJid ? Prisma.sql`AND "Contact"."remoteJid" = ${remoteJid}` : Prisma.sql``}
-            ${timestampFilter}
-          ORDER BY 
-            "Contact"."remoteJid",
-            "Message"."messageTimestamp" DESC
-        )
-        SELECT * FROM rankedMessages
-        ORDER BY updatedAt DESC NULLS LAST;
     `;
 
     if (results && isArray(results) && results.length > 0) {
